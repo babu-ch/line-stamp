@@ -43,11 +43,17 @@ pointsize_for_len() {
 jq -c '.stickers[]' "$MANIFEST" | while read -r row; do
   id=$(jq -r '.id' <<<"$row")
   cap=$(jq -r '.caption' <<<"$row")
-  src="$RAW/$id.jpeg"
   dst="$OUT/$id.png"
 
-  if [ ! -f "$src" ]; then
-    echo "SKIP $id (no raw: $src)"
+  src=""
+  for ext in png jpeg jpg webp; do
+    if [ -f "$RAW/$id.$ext" ]; then
+      src="$RAW/$id.$ext"
+      break
+    fi
+  done
+  if [ -z "$src" ]; then
+    echo "SKIP $id (no raw in $RAW)"
     continue
   fi
 

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run scripts/cli.ts",
+    "gen": "bun run scripts/gen.ts",
     "nano-banana": "bun run node_modules/nano-banana-2/src/cli.ts"
   },
   "dependencies": {
