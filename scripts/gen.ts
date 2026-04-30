@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
-// 画像生成の統一ラッパー。nano-banana / openai を --provider で切り替え。
+// 画像生成の統一ラッパー。gemini (nano-banana) / openai を --provider で切り替え。
 //
 // usage:
-//   bun run gen "<prompt>" --provider nano|openai -o <name> [-d <dir>] [-r <ref>...]
+//   bun run gen "<prompt>" [--provider gemini|openai] -o <name> [-d <dir>] [-r <ref>...]
+//
+// provider 決定の優先順: --provider > PROVIDER env > "gemini"
 //
 // nano-banana (default) は既存の nano-banana-2 CLI を spawn。
 // openai は /v1/images/{generations,edits} を直接叩いて PNG を保存。
@@ -29,7 +31,7 @@ const { values: opts, positionals } = parseArgs({
   args: process.argv.slice(2),
   allowPositionals: true,
   options: {
-    provider: { type: "string", default: "nano" },
+    provider: { type: "string" },
     model: { type: "string" },
     ref: { type: "string", multiple: true, short: "r" },
     transparent: { type: "boolean", short: "t", default: false },
@@ -44,9 +46,12 @@ const { values: opts, positionals } = parseArgs({
 
 const prompt = positionals[0];
 if (!prompt) {
-  console.error('usage: bun run gen "<prompt>" --provider nano|openai -o <name> [-d <dir>] [-r <ref>...]');
+  console.error('usage: bun run gen "<prompt>" [--provider gemini|openai] -o <name> [-d <dir>] [-r <ref>...]');
   process.exit(1);
 }
+
+// provider 決定の優先順: --provider > PROVIDER env > "gemini"
+const provider = opts.provider || readEnv("PROVIDER") || "gemini";
 if (!opts.output) {
   console.error("error: --output (-o) is required");
   process.exit(1);
@@ -58,7 +63,7 @@ const finalPrompt = opts["no-green-bg"] ? prompt : prompt + GREEN_BG_SUFFIX;
 
 mkdirSync(opts.dir!, { recursive: true });
 
-if (opts.provider === "nano") {
+if (provider === "gemini") {
   const args = [
     "run", "nano-banana", finalPrompt,
     "-s", opts.size || "512",
@@ -73,7 +78,7 @@ if (opts.provider === "nano") {
   process.exit(r.status ?? 0);
 }
 
-if (opts.provider === "openai") {
+if (provider === "openai") {
   const apiKey = readEnv("OPENAI_API_KEY");
   if (!apiKey) {
     console.error("error: OPENAI_API_KEY not found in env or .env");
@@ -146,5 +151,5 @@ if (opts.provider === "openai") {
   process.exit(0);
 }
 
-console.error(`unknown provider: ${opts.provider} (expected: nano | openai)`);
+console.error(`unknown provider: ${provider} (expected: gemini | openai)`);
 process.exit(1);

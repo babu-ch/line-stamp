@@ -1,6 +1,6 @@
 # stamps — LINE スタンプ生成プロジェクト
 
-画像生成 API を使って LINE スタンプを作る。デフォは **nano-banana-2** (Gemini 3.1 Flash Image)、`--provider openai` で **gpt-image-1**（OpenAI 既定）/ `gpt-image-2` にも切り替えられる。
+画像生成 API を使って LINE スタンプを作る。デフォの provider は `gemini`（**nano-banana-2** 経由 / Gemini 3.1 Flash Image）、`--provider openai` で **gpt-image-1**（OpenAI 既定）/ `gpt-image-2` にも切り替えられる。`.env` の `PROVIDER=openai` で常用デフォを変更可。
 Claude Code との対話で進めることが前提。手順をガチガチに固めず、フェーズの境界だけ揃える。
 
 ## セットアップ
@@ -10,6 +10,7 @@ Claude Code との対話で進めることが前提。手順をガチガチに�
 # .env に GEMINI_API_KEY か OPENAI_API_KEY のどちらか（両方でも可）を入れる
 #   Gemini: https://aistudio.google.com/apikey
 #   OpenAI: https://platform.openai.com/api-keys
+# 常用 provider を変えたい場合は PROVIDER=openai を .env に追加（既定は gemini）
 ```
 
 ## 4 フェーズ
@@ -41,7 +42,7 @@ Claude Code との対話で進めることが前提。手順をガチガチに�
 
 ## フェーズ 1：参照画像（ループ）
 
-ユーザーから引き出す: モチーフ / 画風・色味 / 用途・雰囲気 / 案出しは Claude かユーザー指定か / **どの provider で生成するか**（未指定なら nano）。
+ユーザーから引き出す: モチーフ / 画風・色味 / 用途・雰囲気 / 案出しは Claude かユーザー指定か / **どの provider で生成するか**（未指定なら gemini）。
 
 - 候補は **並列生成**（`xargs -P 4`）。
 - 採用案を `user/character/<name>/ref.png` にコピー、確定プロンプトを `style.md` に保存。
@@ -49,7 +50,7 @@ Claude Code との対話で進めることが前提。手順をガチガチに�
 
 ## フェーズ 2：manifest ＋ フォント決定（ループ）
 
-ユーザーから引き出す: 対象キャラ / セット個数 / 全体テーマ / provider 選択（未指定なら nano）。
+ユーザーから引き出す: 対象キャラ / セット個数 / 全体テーマ / provider 選択（未指定なら gemini）。
 
 **手順**:
 1. Claude が captions+prompt の JSON ドラフトを提示 → ユーザー編集で確定。
@@ -63,7 +64,7 @@ Claude Code との対話で進めることが前提。手順をガチガチに�
   "set": { "name": "string", "count": 8 },
   "character": { "ref": "user/character/<name>/ref.png", "style_md": "user/character/<name>/style.md" },
   "font": { "path": "/Users/<you>/Library/Fonts/851_kanaA.ttf" },
-  "provider": "nano",
+  "provider": "gemini",
   "model": "flash",
   "stickers": [
     { "id": "01", "caption": "おはよう", "prompt": "waving hand, morning vibes" }
@@ -95,14 +96,14 @@ manifest（font 含む）が揃ったら追加指示なしで進める。
 
 ## 画像生成コマンドリファレンス
 
-統一ラッパー: `bun run gen "<prompt>" --provider nano|openai <options>`。
+統一ラッパー: `bun run gen "<prompt>" [--provider gemini|openai] <options>`。`--provider` 未指定時は `PROVIDER` env、それも無ければ `gemini`。
 provider 共通で**緑バック背景指示が自動で suffix される**（`--no-green-bg` で抑制）。後段の `process-set.sh` が緑を抜く前提。
 
 ### 共通オプション
 
 | オプション | 意味 |
 |---|---|
-| `--provider` | `nano`（既定） / `openai` |
+| `--provider` | `gemini`（既定 / `PROVIDER` env で上書き可） / `openai` |
 | `--model` | provider 別の既定あり |
 | `-r, --ref` | 参照画像（複数可） |
 | `-o, --output` | 出力ファイル名（拡張子なし） |
@@ -111,7 +112,7 @@ provider 共通で**緑バック背景指示が自動で suffix される**（`-
 
 ### provider 別
 
-| | nano (nano-banana-2) | openai (gpt-image-*) |
+| | gemini (nano-banana-2) | openai (gpt-image-*) |
 |---|---|---|
 | 既定モデル | `flash` | `gpt-image-1`（`OPENAI_MODEL` env で上書き可） |
 | 他モデル | `pro` | `gpt-image-1.5` / `gpt-image-2`（要 org verify） / `gpt-image-1-mini` |
@@ -125,7 +126,7 @@ provider 共通で**緑バック背景指示が自動で suffix される**（`-
 ### 並列例
 
 ```bash
-seq -w 1 4 | xargs -P 4 -I{} bun run gen "<prompt>" --provider nano -o cand-{} -d user/character/<name>/candidates
+seq -w 1 4 | xargs -P 4 -I{} bun run gen "<prompt>" --provider gemini -o cand-{} -d user/character/<name>/candidates
 seq -w 1 4 | xargs -P 4 -I{} bun run gen "<prompt>" --provider openai --model gpt-image-2 --quality low -o cand-{} -d user/character/<name>/candidates
 ```
 
@@ -133,11 +134,11 @@ seq -w 1 4 | xargs -P 4 -I{} bun run gen "<prompt>" --provider openai --model gp
 
 | provider | モデル | サイズ | $/枚 | 40 枚 |
 |---|---|---|---|---|
-| nano | flash | 512 | $0.045 | $1.80 |
-| nano | flash | 1K | $0.067 | $2.68 |
-| nano | flash | 2K | $0.101 | $4.04 |
-| nano | flash | 4K | $0.151 | $6.04 |
-| nano | pro | (× 2 程度) | — | — |
+| gemini | flash | 512 | $0.045 | $1.80 |
+| gemini | flash | 1K | $0.067 | $2.68 |
+| gemini | flash | 2K | $0.101 | $4.04 |
+| gemini | flash | 4K | $0.151 | $6.04 |
+| gemini | pro | (× 2 程度) | — | — |
 | openai | gpt-image-1 | 1024 low | $0.011 | $0.44 |
 | openai | gpt-image-1 | 1024 medium | $0.042 | $1.68 |
 | openai | gpt-image-1 | 1024 high | $0.167 | $6.68 |
@@ -177,7 +178,7 @@ stamps/
 
 ## 既知の落とし穴
 
-- **nano `-t`（透過）が CLI 内で失敗する環境がある**: ローカル ffmpeg の x265 dylib 未解決などで、nano-banana の colorkey + despill ステップが落ちて **空の/壊れた JPEG が `raw/` に残る**ことがある。残ったゴミファイルを Claude が Read すると Anthropic API が `400 Could not process image` を返してセッションが詰む。
+- **gemini provider の `-t`（透過）が CLI 内で失敗する環境がある**: ローカル ffmpeg の x265 dylib 未解決などで、nano-banana の colorkey + despill ステップが落ちて **空の/壊れた JPEG が `raw/` に残る**ことがある。残ったゴミファイルを Claude が Read すると Anthropic API が `400 Could not process image` を返してセッションが詰む。
   - 予防: `.claude/settings.json` の PreToolUse hook → `scripts/check-image-magic.sh` がマジックバイト不正の画像を Read 前にブロックする。
   - 復旧: 壊れた `raw/NN.<ext>` を削除して個別再生成。透過処理は ImageMagick 側でやり直す（`magick <src> -fuzz 30% -transparent "rgb(0,255,0)" -trim +repage <dst>.png`）。
 - **gpt-image-2 は透過非対応**: `background: "transparent"` が API レベルで弾かれる。`bun run gen --provider openai` は緑バック付き prompt を自動生成して `process-set.sh` で抜く方針。透過対応モデルが必要なら `--model gpt-image-1` か `gpt-image-1.5`。
@@ -188,7 +189,7 @@ stamps/
 ## ガードレール
 
 - **画像生成コマンドの前に見積もりを 1 行**: `N枚 × $X.XX = $Y.YY 程度（+20% 想定）`。合意とってから実行。provider / model / size に応じて上のコスト表を参照。
-- **provider 既定**: `nano` (`flash` / `512`)。OpenAI への切替は明示依頼時のみ。
+- **provider 既定**: `gemini` (`flash` / `512`)。`.env` の `PROVIDER` で上書き可。明示依頼以外で provider を切り替えない。
 - **API キーを画面に出さない**。`.env` の中身を読み上げない。
 - **ユーザー生成物は `user/` 配下にのみ書き込む**。ツール部分には触れない。
 - **ノーヒントで始まったとき**: `user/character/*` と `user/sets/*` を全部スキャンして、各セットの進行度（`manifest.json` のみ / `raw/` 途中 / `processed/` 途中 / `submit/` 揃い / `<set>.zip` 完成）を **1 行ずつ列挙して報告**。そのうえで:
