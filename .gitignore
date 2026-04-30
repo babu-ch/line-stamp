@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+
+user/
+
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+*.swp
+
+.claude/*.lock

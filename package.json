@@ -1,0 +1,14 @@
+{
+  "name": "stamps",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LINE sticker generator built on nano-banana-2",
+  "type": "module",
+  "scripts": {
+    "start": "bun run scripts/cli.ts",
+    "nano-banana": "bun run node_modules/nano-banana-2/src/cli.ts"
+  },
+  "dependencies": {
+    "nano-banana-2": "github:kingbootoshi/nano-banana-2-skill"
+  }
+}
