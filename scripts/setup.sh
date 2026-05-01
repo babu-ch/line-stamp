@@ -35,8 +35,18 @@ brew_install_if_missing() {
 
 info "Checking required tools..."
 if ! need_cmd bun; then
-  error "bun not found. Install: curl -fsSL https://bun.sh/install | bash"
-  exit 1
+  if [[ "${SKIP_BUN_INSTALL:-0}" == "1" ]]; then
+    error "bun not found and SKIP_BUN_INSTALL=1. Install manually: curl -fsSL https://bun.sh/install | bash"
+    exit 1
+  fi
+  info "Installing bun via official installer (https://bun.sh/install)..."
+  curl -fsSL https://bun.sh/install | bash
+  export BUN_INSTALL="$HOME/.bun"
+  export PATH="$BUN_INSTALL/bin:$PATH"
+  if ! need_cmd bun; then
+    error "bun install finished but bun not in PATH. Re-open your shell, or run: export PATH=\"\$HOME/.bun/bin:\$PATH\""
+    exit 1
+  fi
 fi
 ok "bun: $(bun --version)"
 
